@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identity demo page</title>
+<!--
+  Chrome Roads RP — the customer-shaped page (RP step 3e; plans/2026-11-08-rp-3e-customer-page-end-to-end.md).
+
+  This page is what a customer's own website does: it never holds a tenant credential. The customer's
+  backend (here: rp/demo/open_intent.py) opens an authorization intent on the RP and hands this page a
+  one-time ceremony token in the URL FRAGMENT (never the query string: fragments do not reach servers or
+  logs). The page then talks to the RP directly, cross-origin, with that token:
+
+      GET  {rp}/v1/authorization-intents/{intent}/ceremony            what this ceremony is
+      POST {rp}/v1/authorization-intents/{intent}/ceremony/options    the WebAuthn options
+      navigator.credentials.create() / .get()                         the authenticator (a card, a phone, a key)
+      POST {rp}/v1/authorization-intents/{intent}/ceremony/verify     { credential: PublicKeyCredential.toJSON() }
+
+  No framework, no build step, no analytics, no secrets. Source of truth: rp/demo/page/ in the
+  Digital-Identity-Full-Stack repository; the GitHub Pages copy is published from there.
+-->
+<style>
+  :root { --ink:#1d2a33; --muted:#5b6b75; --line:#d7dee3; --wash:#f3f6f8; --ok:#1b7f4b; --bad:#a8321f; --accent:#0099ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:#fff; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { border:1px solid var(--line); border-radius: 10px; padding: 16px; margin: 0 0 16px; background:#fff; }
+  .card h2 { font-size: 1rem; margin: 0 0 10px; }
+  dl { display:grid; grid-template-columns: 11em 1fr; gap: 4px 12px; margin:0; }
+  dt { color: var(--muted); } dd { margin:0; word-break: break-all; font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
+  label { display:block; margin: 8px 0 4px; color: var(--muted); font-size:.9rem; }
+  input { width:100%; padding: 8px 10px; border:1px solid var(--line); border-radius: 6px; font: inherit; font-family: ui-monospace, Consolas, monospace; font-size:.9rem; }
+  button { font: inherit; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color:#fff; cursor:pointer; }
+  button[disabled] { opacity:.5; cursor: default; }
+  button.secondary { background:#fff; color: var(--accent); }
+  .row { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 12px; }
+  ol.log { list-style: none; padding: 0; margin: 0; }
+  ol.log li { padding: 6px 0; border-top: 1px solid var(--wash); font-family: ui-monospace, Consolas, monospace; font-size:.85rem; white-space: pre-wrap; word-break: break-word; }
+  ol.log li.ok { color: var(--ok); } ol.log li.bad { color: var(--bad); }
+  pre { background: var(--wash); padding: 12px; border-radius: 8px; overflow:auto; font-size:.8rem; margin: 8px 0 0; }
+  .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; background: var(--wash); font-size:.8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Identity demo page</h1>
+  <p class="sub">A customer's page, not the Admin. Origin: <span class="pill" id="origin"></span></p>
+
+  <section class="card" id="handoff">
+    <h2>1. The hand-off from the customer's backend</h2>
+    <p class="sub">Normally these arrive in the URL fragment from <code>open_intent.py</code>. Paste them here to run by hand.</p>
+    <label for="rp">RP URL</label><input id="rp" placeholder="https://demoid.rp.chromeroads.com" autocomplete="off" spellcheck="false">
+    <label for="intent">Intent id</label><input id="intent" placeholder="uuid" autocomplete="off" spellcheck="false">
+    <label for="token">Ceremony token (one-time)</label><input id="token" placeholder="ct1.…" autocomplete="off" spellcheck="false">
+    <div class="row">
+      <button id="load" type="button">Read the ceremony</button>
+      <span id="view-summary" class="pill" hidden></span>
+    </div>
+    <dl id="view" hidden></dl>
+  </section>
+
+  <section class="card">
+    <h2>2. The ceremony</h2>
+    <p class="sub">Options from the RP → your authenticator → the response goes back to the RP. The page decides nothing.</p>
+    <div class="row">
+      <button id="run" type="button" disabled>Run the ceremony</button>
+      <button id="copy" type="button" class="secondary" hidden>Copy result</button>
+    </div>
+    <ol class="log" id="log"></ol>
+    <pre id="result" hidden></pre>
+  </section>
+</main>
+<script src="rp-demo.js"></script>
+</body>
+</html>
